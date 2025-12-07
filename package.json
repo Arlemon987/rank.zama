@@ -1,7 +1,9 @@
 {
   "name": "zama-rank-scraper",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "Scraper for Zama Creator Program Leaderboard",
   "dependencies": {
-    "cheerio": "^1.0.0-rc.12"
+    "cheerio": "^1.0.0-rc.12",
+    "node-fetch": "^3.3.2"
   }
 }
