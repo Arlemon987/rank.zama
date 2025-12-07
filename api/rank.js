@@ -9,128 +9,153 @@ export default async function handler(req, res) {
 
     const cleanHandle = handle.replace('@', '').toLowerCase();
     
-    // NOTE: If scraping fails, check the Network tab in your browser on the real site
-    // and find the API endpoint they use to load the data (JSON), then use that URL here.
-    const targetUrl = 'https://www.zama.org/programs/creator-program';
+    // OPTIONAL: If scraping fails, find the API URL in your browser DevTools (Network tab) 
+    // and paste it here. It usually looks like a long JSON file or an API endpoint.
+    const MANUAL_API_URL = ""; 
+    
+    const MAIN_PAGE_URL = "https://www.zama.org/programs/creator-program";
+
+    let responseData = {
+        found: false,
+        handle: cleanHandle,
+        stats: {
+            "24h": { rank: "---", score: "---" },
+            "7d": { rank: "---", score: "---" },
+            "30d": { rank: "---", score: "---" }
+        }
+    };
 
     try {
-        console.log(`[Scraper] Fetching: ${targetUrl}`);
+        let rawData = null;
 
-        // 1. Fetch with Browser Headers (Helps bypass simple bot protection)
-        const response = await fetch(targetUrl, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.5"
+        // --- STRATEGY 1: Fetch from Manual API (If user provided it) ---
+        if (MANUAL_API_URL) {
+            try {
+                const apiRes = await fetch(MANUAL_API_URL);
+                if (apiRes.ok) rawData = await apiRes.json();
+            } catch (e) {
+                console.error("Manual API fetch failed:", e);
             }
-        });
-
-        if (!response.ok) {
-            console.error(`[Scraper] Failed to fetch page. Status: ${response.status}`);
-            return res.status(response.status).json({ error: 'Failed to access target site' });
         }
 
-        const html = await response.text();
-        console.log(`[Scraper] Page fetched. Length: ${html.length} chars`);
-
-        // 2. Load into Cheerio
-        const $ = cheerio.load(html);
-
-        let found = false;
-        let rank = 0;
-        let score = 0;
-
-        // 3. SEARCH STRATEGY A: Standard Table
-        $('tr').each((i, row) => {
-            const rowText = $(row).text().toLowerCase();
-            if (rowText.includes(cleanHandle)) {
-                console.log(`[Scraper] Found handle in Table Row: ${i}`);
-                
-                const cols = $(row).find('td');
-                // Attempt to parse columns. This assumes standard layout: Rank | Name | Score
-                cols.each((j, col) => {
-                    const txt = $(col).text().trim().replace(/,/g, ''); // Remove commas
-                    
-                    // Heuristics to identify data
-                    if (txt.includes('#') || /^\d+$/.test(txt)) {
-                        // Likely Rank
-                        const r = parseInt(txt.replace('#', ''));
-                        if (!isNaN(r)) rank = r;
-                    } 
-                    else if (/^[\d.]+$/.test(txt) && txt.includes('.')) {
-                        // Likely Score (decimal)
-                        const s = parseFloat(txt);
-                        if (!isNaN(s)) score = s;
-                    }
-                });
-                
-                found = true;
-                return false; // Break loop
-            }
-        });
-
-        // 4. SEARCH STRATEGY B: Generic Divs (If tables aren't used)
-        if (!found) {
-            console.log("[Scraper] Checking generic divs...");
-            // Look for any element containing the handle
-            $('*').each((i, el) => {
-                if (found) return; // Stop if already found
-                
-                // Get direct text of this element only (not children)
-                const text = $(el).clone().children().remove().end().text().trim().toLowerCase();
-                
-                if (text.includes(cleanHandle) || text === '@' + cleanHandle) {
-                    console.log(`[Scraper] Found handle in element: <${el.tagName}>`);
-                    
-                    // Look at siblings or parent for numbers
-                    const parent = $(el).parent();
-                    const siblings = parent.find('*'); // All elements in the same container
-                    
-                    siblings.each((j, sib) => {
-                        const sibText = $(sib).text().trim().replace(/,/g, '');
-                        
-                        // Look for Rank (Integers like 1, 150, #20)
-                        if (!rank && (sibText.startsWith('#') || /^\d+$/.test(sibText))) {
-                            const r = parseInt(sibText.replace('#', ''));
-                            if (r > 0 && r < 10000) rank = r; // Sanity check
-                        }
-                        
-                        // Look for Score (Decimals like 12.5, 100.00)
-                        if (!score && /^[\d.]+$/.test(sibText) && sibText.includes('.')) {
-                            score = parseFloat(sibText);
-                        }
-                    });
-
-                    found = true;
+        // --- STRATEGY 2: Scrape __NEXT_DATA__ (Standard for Vercel/Next.js sites) ---
+        // This is usually where the data lives before the page is hydrated.
+        if (!rawData) {
+            const pageRes = await fetch(MAIN_PAGE_URL, {
+                headers: {
+                    // Fake a real browser to avoid basic bot blocking
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
                 }
             });
+            
+            const html = await pageRes.text();
+            const $ = cheerio.load(html);
+
+            const nextDataScript = $('#__NEXT_DATA__').html();
+            
+            if (nextDataScript) {
+                try {
+                    const json = JSON.parse(nextDataScript);
+                    rawData = json; 
+                } catch (e) {
+                    console.error("Failed to parse Next.js data");
+                }
+            }
         }
 
-        // 5. DEBUGGING: Check for "Client Side Rendering" indicators
-        if (!found) {
-            const bodyText = $('body').text().toLowerCase();
-            if (bodyText.includes('loading') || html.length < 5000) {
-                console.log("[Scraper] WARNING: Page might be loading via JavaScript (CSR). Fetch cannot see data.");
-            }
-            if (!bodyText.includes('rank') && !bodyText.includes('leaderboard')) {
-                console.log("[Scraper] WARNING: 'Rank' or 'Leaderboard' keywords not found in HTML. Wrong URL?");
+        // --- PROCESS FOUND DATA ---
+        if (rawData) {
+            // Find the specific user object within the massive JSON tree
+            const userObj = findUserInDeepJSON(rawData, cleanHandle);
+
+            if (userObj) {
+                responseData.found = true;
+                
+                // 1. Extract 30D Data (Standard View)
+                responseData.stats["30d"] = {
+                    rank: userObj.rank || userObj.position || "---",
+                    score: parseScore(userObj.score || userObj.points || userObj.mindshare)
+                };
+
+                // 2. Extract 24H and 7D Data
+                // The data structure varies, but often looks like history: { '24h': {...}, '7d': {...} }
+                // or specific fields like score_24h, rank_24h
+                
+                if (userObj.history) {
+                    // Structure A: Nested history object
+                    if (userObj.history['24h']) responseData.stats["24h"] = formatStat(userObj.history['24h']);
+                    if (userObj.history['7d']) responseData.stats["7d"] = formatStat(userObj.history['7d']);
+                } else {
+                    // Structure B: Flat fields (common fallback)
+                    if (userObj.rank_24h || userObj.score_24h) {
+                        responseData.stats["24h"] = {
+                            rank: userObj.rank_24h || "---",
+                            score: parseScore(userObj.score_24h)
+                        };
+                    }
+                    if (userObj.rank_7d || userObj.score_7d) {
+                        responseData.stats["7d"] = {
+                            rank: userObj.rank_7d || "---",
+                            score: parseScore(userObj.score_7d)
+                        };
+                    }
+                }
             }
         }
 
-        if (found) {
-            return res.status(200).json({
-                found: true,
-                handle: cleanHandle,
-                rank: rank || 9999, // Fallback if rank wasn't parsed clearly
-                score: score || 0
-            });
-        } else {
-            console.log(`[Scraper] User ${cleanHandle} not found in static HTML.`);
-            return res.status(200).json({ found: false });
-        }
+        return res.status(200).json(responseData);
 
     } catch (error) {
-        console.error("Scraping error:", error);
-        return res.status(500).json({ error: 'Failed to fetch external data' });
+        console.error("Handler Error:", error);
+        return res.status(500).json({ error: "Server Error" });
     }
+}
+
+// --- HELPERS ---
+
+function parseScore(val) {
+    if (!val && val !== 0) return "---";
+    if (typeof val === 'number') return val.toFixed(2); // Format to 2 decimals
+    if (typeof val === 'string') return parseFloat(val).toFixed(2);
+    return val;
+}
+
+function formatStat(obj) {
+    return {
+        rank: obj.rank || obj.position || "---",
+        score: parseScore(obj.score || obj.points || obj.mindshare)
+    };
+}
+
+// Recursively search for a user object containing the handle
+function findUserInDeepJSON(obj, handle) {
+    if (!obj || typeof obj !== 'object') return null;
+
+    // Check if THIS object is the user we want
+    if (
+        (obj.handle && String(obj.handle).toLowerCase().includes(handle)) ||
+        (obj.username && String(obj.username).toLowerCase().includes(handle)) ||
+        (obj.twitter && String(obj.twitter).toLowerCase().includes(handle))
+    ) {
+        return obj;
+    }
+
+    // Recursion
+    if (Array.isArray(obj)) {
+        for (let item of obj) {
+            const found = findUserInDeepJSON(item, handle);
+            if (found) return found;
+        }
+    } else {
+        for (let key in obj) {
+            // Optimization: Skip massive irrelevant keys if possible, but for safety check all
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                const found = findUserInDeepJSON(obj[key], handle);
+                if (found) return found;
+            }
+        }
+    }
+
+    return null;
 }
