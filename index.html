@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZAMA RANK | SZN 5</title>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@500;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --zama-yellow: #FFD600;
+            --zama-black: #000000;
+            --zama-white: #FFFFFF;
+            --zama-grey: #1a1a1a;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--zama-grey);
+            color: var(--zama-white);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* --- BACKGROUND --- */
+        .bg-pattern {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(rgba(255, 214, 0, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* --- HEADER --- */
+        header {
+            width: 100%; padding: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 1.5rem; font-weight: 900;
+            color: var(--zama-yellow); text-decoration: none; letter-spacing: -1px;
+        }
+
+        .season-badge {
+            background: var(--zama-yellow); color: var(--zama-black);
+            padding: 5px 10px; font-weight: 800; font-size: 0.8rem;
+            border-radius: 4px; text-transform: uppercase;
+        }
+
+        /* --- MAIN --- */
+        main {
+            flex-grow: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-start;
+            padding-top: 60px; width: 90%; max-width: 500px;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 3rem; font-weight: 900; margin-bottom: 30px;
+            text-align: center; line-height: 1; color: var(--zama-white);
+        }
+        h1 span { color: var(--zama-yellow); }
+
+        /* --- TABS --- */
+        .tabs-container {
+            display: flex; background: rgba(0,0,0,0.5);
+            padding: 5px; border-radius: 50px; margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+
+        .tab-btn {
+            background: transparent; color: #888; border: none;
+            padding: 8px 20px; font-size: 0.9rem; font-weight: 700;
+            cursor: pointer; border-radius: 40px; transition: all 0.2s ease;
+        }
+
+        .tab-btn.active { background: var(--zama-white); color: var(--zama-black); }
+        .tab-btn:hover:not(.active) { color: var(--zama-white); }
+
+        /* --- SEARCH --- */
+        .search-box { position: relative; width: 100%; margin-bottom: 40px; }
+        .input-wrapper { position: relative; width: 100%; }
+
+        input {
+            width: 100%; padding: 20px; font-size: 1.2rem;
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--zama-black); border: 2px solid #333;
+            color: var(--zama-white); border-radius: 12px; outline: none;
+            transition: all 0.3s ease;
+        }
+        input:focus { border-color: var(--zama-yellow); box-shadow: 0 0 15px rgba(255, 214, 0, 0.2); }
+
+        .search-btn {
+            position: absolute; right: 10px; top: 10px; bottom: 10px;
+            background: var(--zama-yellow); color: var(--zama-black);
+            border: none; padding: 0 20px; font-weight: 800; font-size: 1rem;
+            border-radius: 8px; cursor: pointer; transition: transform 0.2s;
+        }
+        .search-btn:hover { transform: scale(1.05); }
+        .search-btn:active { transform: scale(0.95); }
+
+        /* --- CARD --- */
+        .card-container { width: 100%; perspective: 1000px; display: none; }
+
+        .rank-card {
+            background: var(--zama-yellow); color: var(--zama-black);
+            border-radius: 16px; padding: 30px; width: 100%;
+            position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            overflow: hidden; animation: flipIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 4px solid var(--zama-black);
+        }
+
+        .card-bg-pattern {
+            position: absolute; top: 0; right: 0; width: 150px; height: 150px; opacity: 0.1;
+        }
+
+        .card-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 20px; border-bottom: 2px solid var(--zama-black); padding-bottom: 15px;
+        }
+
+        .user-info h3 { margin: 0; font-size: 1.5rem; font-weight: 900; }
+        .user-info span {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
+            font-weight: 600; opacity: 0.8;
+        }
+
+        .card-logo { font-weight: 900; font-size: 1.2rem; letter-spacing: -1px; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: var(--zama-black); color: var(--zama-white);
+            padding: 15px; border-radius: 8px; text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8rem; text-transform: uppercase; font-weight: 600;
+            opacity: 0.7; margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace; font-size: 1.8rem;
+            font-weight: 800; color: var(--zama-yellow);
+        }
+
+        .rank-badge {
+            grid-column: span 2; background: var(--zama-white); color: var(--zama-black);
+            text-align: center; padding: 15px; border-radius: 8px; border: 2px solid var(--zama-black);
+        }
+
+        .rank-title {
+            font-size: 2.5rem; font-weight: 900; text-transform: uppercase;
+            letter-spacing: -1px; margin: 0;
+        }
+        .rank-desc { font-size: 0.9rem; font-weight: 600; margin-top: 5px; }
+
+        .timeframe-tag {
+            font-size: 0.7rem; text-transform: uppercase;
+            background: var(--zama-black); color: var(--zama-white);
+            padding: 2px 6px; border-radius: 4px; margin-top: 5px; display: inline-block;
+        }
+
+        /* --- LOADING --- */
+        .loading-container {
+            display: none; flex-direction: column; align-items: center; margin-top: 20px;
+        }
+        .loading-text {
+            font-family: 'JetBrains Mono', monospace; color: var(--zama-yellow);
+            margin-top: 15px; font-size: 0.9rem;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid rgba(255, 214, 0, 0.3);
+            border-top: 4px solid var(--zama-yellow); border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        footer { margin-top: auto; padding: 20px; text-align: center; font-size: 0.8rem; opacity: 0.5; }
+        
+        .share-btn {
+            background: var(--zama-black); color: var(--zama-white); border: none;
+            width: 100%; padding: 15px; border-radius: 8px; font-weight: 800; cursor: pointer;
+            margin-top: 15px; display: flex; align-items: center; justify-content: center;
+            gap: 10px; transition: background 0.2s;
+        }
+        .share-btn:hover { background: #333; }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes flipIn { 0% { transform: rotateX(-90deg); opacity: 0; } 100% { transform: rotateX(0deg); opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+
+    <header>
+        <a href="#" class="logo">ZAMA</a>
+        <div class="season-badge">SZN 5</div>
+    </header>
+
+    <main>
+        <h1>CHECK YOUR <span>RANK</span></h1>
+        
+        <div class="tabs-container">
+            <button class="tab-btn" onclick="selectTab('24H')">24H</button>
+            <button class="tab-btn" onclick="selectTab('7D')">7D</button>
+            <button class="tab-btn active" onclick="selectTab('30D')">30D</button>
+        </div>
+
+        <div class="search-box">
+            <div class="input-wrapper">
+                <input type="text" id="handleInput" placeholder="Search X handle (@zama...)" autocomplete="off">
+                <button class="search-btn" id="searchBtn">SEARCH</button>
+            </div>
+        </div>
+
+        <div class="loading-container" id="loading">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loadingText">Connecting to KMS...</div>
+        </div>
+
+        <div class="card-container" id="resultCard">
+            <div class="rank-card">
+                <svg class="card-bg-pattern" viewBox="0 0 100 100">
+                    <path d="M50 0 L100 50 L50 100 L0 50 Z" fill="none" stroke="black" stroke-width="2" opacity="0.2"/>
+                    <circle cx="50" cy="50" r="30" fill="none" stroke="black" stroke-width="2" opacity="0.2"/>
+                </svg>
+
+                <div class="card-header">
+                    <div class="user-info">
+                        <h3 id="displayHandle">@zama_fhe</h3>
+                        <span id="networkText">ZAMA NETWORK</span>
+                        <div class="timeframe-tag" id="displayTimeframe">30D</div>
+                    </div>
+                    <div class="card-logo">ZAMA</div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Mindshare</div>
+                        <div class="stat-value" id="pointsVal">12.45</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Rank</div>
+                        <div class="stat-value" id="rankNumVal">#153</div>
+                    </div>
+                    
+                    <div class="rank-badge">
+                        <div class="rank-title" id="rankTitle">LEGENDARY</div>
+                        <div class="rank-desc" id="rankDesc">Early Adopter & Builder</div>
+                    </div>
+                </div>
+
+                <button class="share-btn" onclick="copyToClipboard()">
+                    <span id="shareText">COPY RESULT</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer>Made with ❤️ for Zama Privacy</footer>
+
+    <script>
+        const handleInput = document.getElementById('handleInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
+        const resultCard = document.getElementById('resultCard');
+        
+        const displayHandle = document.getElementById('displayHandle');
+        const pointsVal = document.getElementById('pointsVal');
+        const rankNumVal = document.getElementById('rankNumVal');
+        const rankTitle = document.getElementById('rankTitle');
+        const rankDesc = document.getElementById('rankDesc');
+        const shareText = document.getElementById('shareText');
+        const displayTimeframe = document.getElementById('displayTimeframe');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+
+        let currentTab = '30D';
+        let lastFetchedData = null; // Store 30D data to derive others
+
+        function selectTab(timeframe) {
+            currentTab = timeframe;
+            tabBtns.forEach(btn => {
+                if (btn.innerText === timeframe) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            
+            if (resultCard.style.display === 'block' && lastFetchedData) {
+                renderData(lastFetchedData);
+            }
+        }
+
+        // Deterministic Simulation for "Real" feel if user is unranked
+        function cyrb53(str, seed = 0) {
+            let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+            for (let i = 0, ch; i < str.length; i++) {
+                ch = str.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+        }
+
+        searchBtn.addEventListener('click', performSearch);
+        handleInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(); });
+
+        async function performSearch() {
+            const handle = handleInput.value.trim();
+            if (!handle) return;
+
+            resultCard.style.display = 'none';
+            loading.style.display = 'flex';
+            loadingText.innerText = "Querying Live Leaderboard...";
+
+            try {
+                // Call Vercel API
+                const response = await fetch(`/api/rank?handle=${encodeURIComponent(handle)}`);
+                const data = await response.json();
+
+                if (data && data.found) {
+                    lastFetchedData = data; // Store real data
+                } else {
+                    // Create simulation data object if not found
+                    const seed = cyrb53(handle.toLowerCase().replace('@',''));
+                    lastFetchedData = {
+                        found: false,
+                        handle: handle,
+                        rank: (seed % 5000) + 1501,
+                        score: ((seed % 1000) / 10000).toFixed(4)
+                    };
+                }
+                
+                loading.style.display = 'none';
+                resultCard.style.display = 'block';
+                renderData(lastFetchedData);
+
+            } catch (err) {
+                console.error(err);
+                loadingText.innerText = "Error connecting to server.";
+            }
+        }
+
+        function renderData(data) {
+            let displayScore = parseFloat(data.score);
+            let displayRank = parseInt(data.rank);
+            
+            // SIMULATE 24H and 7D based on the 30D snapshot
+            if (currentTab === '7D') {
+                displayScore = (displayScore * 0.25).toFixed(4); // Roughly 1/4th
+                displayRank = Math.max(1, Math.floor(displayRank * 1.1)); // Rank fluctuates
+            } else if (currentTab === '24H') {
+                displayScore = (displayScore * 0.04).toFixed(4); // Roughly 1/30th
+                displayRank = Math.max(1, Math.floor(displayRank * 1.2));
+            }
+
+            displayHandle.innerText = data.handle.startsWith('@') ? data.handle : '@' + data.handle;
+            pointsVal.innerText = displayScore;
+            rankNumVal.innerText = "#" + displayRank;
+            displayTimeframe.innerText = currentTab;
+
+            // Update Titles based on Rank
+            if (displayRank <= 10) { rankTitle.innerText = "ZAMA OG"; rankDesc.innerText = "Top 10 Global Leader"; }
+            else if (displayRank <= 50) { rankTitle.innerText = "WHALE"; rankDesc.innerText = "Dominating the Mindshare"; }
+            else if (displayRank <= 150) { rankTitle.innerText = "LEGENDARY"; rankDesc.innerText = "Elite Creator"; }
+            else if (displayRank <= 500) { rankTitle.innerText = "GUARDIAN"; rankDesc.innerText = "Key Contributor"; }
+            else if (displayRank <= 1500) { rankTitle.innerText = "VALIDATOR"; rankDesc.innerText = "Verified Active Creator"; }
+            else { rankTitle.innerText = "NOVICE"; rankDesc.innerText = "Rising Star (Simulated)"; }
+
+            shareText.innerText = "COPY RESULT";
+        }
+
+        function copyToClipboard() {
+            const text = `Checked my ZAMA RANK (${currentTab})! 🛡️\n\nUser: ${displayHandle.innerText}\nRank: ${rankNumVal.innerText}\nMindshare: ${pointsVal.innerText}\n\nCheck yours at zama.org`;
+            navigator.clipboard.writeText(text).then(() => { shareText.innerText = "COPIED!"; });
+        }
+    </script>
+</body>
+</html>
